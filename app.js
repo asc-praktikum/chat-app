@@ -1,12 +1,23 @@
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require('express');
+const path = require('path');
+const cookieParser = require('cookie-parser');
+const logger = require('morgan');
 
-var indexRouter = require('./routes/index');
-var chatRouter = require('./routes/chat');
+const indexRouter = require('./routes/index');
+const chatRouter = require('./routes/chat');
 
-var app = express();
+const http = require("http");
+
+const app = express();
+
+const server = http.Server(app);
+const {Server} = require("socket.io");
+const io = new Server(server);
+
+
+io.on('connection', (socket) => {
+    console.log('a user connected');
+});
 
 app.use(logger('dev'));
 app.use(express.json());

@@ -1,8 +1,79 @@
 body {
-  padding: 50px;
-  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif;
+  padding: 0;
+  margin: 0;
+  font: 14px "Lucida Grande", Helvetica, Arial, sans-serif, "Comic Sans MS"; 
+  background-color: RGB(34, 40, 35);
 }
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
 
 a {
   color: #00B7FF;
 }
+
+.hsg-logo {
+  width: 100px;
+  height: 100px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.usericon {
+  width: 100px;
+  height: 100px;
+}
+
+.usericonclass {
+  width: 100px;
+  height: 100px;
+}
+
+#loginbar {
+  display: flex;
+  align-items: center;
+  justify-items: center;
+  gap: 50px;
+
+
+}
+
+#nameinput {
+  width: 200px;
+}
+
+.wrapper {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-items: center;
+  place-content: center;
+  place-items: center;
+}
+
+.loginbutton {
+  width: 50px;
+  height: 50px;
+}
+
+.loginbutton:hover {
+  cursor: pointer;
+  cursor: text="senden";
+}
+
+.loginsign{
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  column-gap: 20px;
+}
+
+h1{
+  color: darkgreen;
+}
+
