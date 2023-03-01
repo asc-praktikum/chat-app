@@ -1,5 +1,17 @@
-window.onload = () => {
+import { createAndLoginDummyUser, createUser, validateJWT } from "./api.js";
+
+window.onload = async () => {
+
+    //check if session exists
+    validateJWT().then(result => {
+        if(result.ok) {
+            window.location.href = "/chat.html";
+        }
+    });
+    
  
+    //avatar
+
     const nameInput = document.getElementById("nameinput");
     const usericon = document.getElementById("usericon");
 
@@ -24,17 +36,31 @@ window.onload = () => {
             if(lastSeed==nameInput.value&&!loading) return;
             lastSeed = nameInput.value;
 
-            if(nameInput.value.toString().toLowerCase()==atob("dG9iaQ==")) {
-                usericon.src = `/images/tobi.png`;
-            }else{
+            
                 usericon.src = `https://api.dicebear.com/5.x/pixel-art/svg?seed=${nameInput.value}`;
 
-            }
+        
             loading = false;
         },300)
     })
 
+    //login button
+    const loginButton = document.getElementById("loginbutton");
+    loginButton.addEventListener("click", ()=>{
+        createAndLoginDummyUser(nameInput.value.toString().trim()).then(()=>{
+            window.location.href = "/chat.html";
+        });
+    });
     
+    //username inpu
+    nameInput.addEventListener("keydown", (event) =>{
+        if(event.key == "Enter") {
+            createAndLoginDummyUser(nameInput.value.toString().trim()).then(()=>{
+                window.location.href = "/chat.html";
+            }); 
+        }
+       
+    });
 
-    
+
 }

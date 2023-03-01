@@ -1,0 +1,7 @@
+-- CreateTable
+CREATE TABLE "chat" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "message" TEXT NOT NULL,
+    "user" TEXT NOT NULL
+);
