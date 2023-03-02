@@ -1,3 +1,5 @@
+import { sendEndMeeting } from "./api.js";
+
 window.onload = async () => {
 
 
@@ -35,40 +37,40 @@ window.onload = async () => {
             hideEmailInSettings: true,
             readOnlyName: true,
             toolbarButtons: [
-                    'camera',
-                //   'chat',
+                'camera',
+                   'chat',
                 //    'closedcaptions',
-                    'desktop',
+                  'desktop',
                 //    'download',
                 //    'embedmeeting',
                 //    'etherpad',
                 //    'feedback',
                 //    'filmstrip',
                 //    'fullscreen',
-                    'hangup',
+                   'hangup',
                 //    'help',
                 //    'highlight',
                 //    'invite',
                 //    'linktosalesforce',
-                //    'livestreaming',
-                    'microphone',
+                    'livestreaming',
+                 'microphone',
                 //    'noisesuppression',
-                //    'participants-pane',
+                    'participants-pane',
                 //    'profile',
                 //    'raisehand',
                 //    'recording',
-                //    'security',
+                    //'security',
                 //    'select-background',
                 //    'settings',
                 //    'shareaudio',
-                //    'sharedvideo',
+                    'sharedvideo',
                 //    'shortcuts',
                 //    'stats',
-                //    'tileview',
-                    'toggle-camera',
-                    'custom-button-santo'
+                    'tileview',
+                //   'toggle-camera',
+                   // 'custom-button-santo'
                 //    'videoquality',
-                //    'whiteboard',
+                    'whiteboard',
                 ],
 
                 hideConferenceSubject: true,
@@ -83,23 +85,26 @@ window.onload = async () => {
                 
         },
 
+        interfaceConfigOverwrite: {
+            TOOLBAR_ALWAYS_VISIBLE: true,
+        },
+
     
         
         
     };
 
-    console.log("TESTSETESTESTESTSETSETSETSET")
     const api = new JitsiMeetExternalAPI(domain, options);
 
     let localUserID;
-    
 
-
-
-   
-    api.addListener("videoConferenceLeft", () => {
+    api.addEventListener("videoConferenceLeft", async () => {
+       await sendEndMeeting();
         window.location.href = "/chat.html";
     });
+
+    
+
 
     var socket = io();
     socket.on('message', function (msg) {
@@ -111,6 +116,10 @@ window.onload = async () => {
             timeout: "long" // optional. Can be 'short', 'medium', 'long', or 'sticky'. Defaults to 'short'.
           });
         //console.log(msg);
+    });
+
+    socket.on("endMeeting", () => {
+        window.location.href = "/chat.html";
     });
 
 }
