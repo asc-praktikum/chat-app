@@ -82,10 +82,32 @@ window.onload = async () => {
 function appendMessage(messagecontainer, messageOBJ, top = false) {
 
     const message = document.createElement("div");
-    const messageText = document.createElement("p");
+    const messageText = document.createElement("div");
+    const messageTime = document.createElement("div");
+
+    const senderText = document.createElement("div");
+    messageTime.innerText = new Date(Date.parse(messageOBJ.createdAt)).toLocaleTimeString();
+    messageTime.classList.add("imessagetime")
+    message.appendChild(messageTime)
+
+    senderText.classList.add("sender");
+    senderText.innerText = messageOBJ.user.name;
+
     message.classList.add("imessage");
-    messageText.classList.add("from-them");
-    messageText.innerHTML = urlify(DOMPurify.sanitize(messageOBJ.message));
+
+        console.log(messageOBJ.user.id);
+
+    if(messageOBJ.user.id == window.localStorage.getItem("userID")) {
+        messageText.classList.add("from-me");
+    }else{
+        messageText.classList.add("from-them");
+
+    }
+    let clean = sanitize(messageOBJ.message);
+    console.log(clean)
+    messageText.append(messageTime)
+    messageText.append(senderText)
+    messageText.innerHTML += urlify(clean);
     message.appendChild(messageText);
 
     if (!top) { //swap because of reversed flexbox
@@ -105,3 +127,16 @@ function urlify(text) {
     })
 
 }
+
+function sanitize(string) {
+    const map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#x27;'
+      //  "/": '&#x2F;',
+    };
+    const reg = /[&<>"']/ig;
+    return string.replace(reg, (match)=>(map[match]));
+  }

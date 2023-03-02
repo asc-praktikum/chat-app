@@ -5,7 +5,7 @@ export function createUser(username, password) {
             "Content-Type": "application/json"
         },
         body: JSON.stringify({ username: username, password: password })
-    }).then(res => res.json());
+    });
 }
 
 export function loginUser(username, password) {
@@ -13,7 +13,6 @@ export function loginUser(username, password) {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "Authorization": "Bearer " + window.localStorage.getItem("jwt")
         },
         body: JSON.stringify({ username: username, password: password })
     }).then(res => res.json());
@@ -42,6 +41,7 @@ export async function createAndLoginDummyUser(username) {
     await createUser(username, "password1234");
     await loginUser(username, "password1234").then(result => {
         window.localStorage.setItem("jwt", result.jwt);
+        window.localStorage.setItem("userID", result.id)
     });
 
 }

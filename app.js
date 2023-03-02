@@ -6,6 +6,7 @@ const { PrismaClient } = require('@prisma/client')
 const jose = require('jose')
 const dotenv = require('dotenv')
 const bcrypt = require('bcrypt')
+const { Configuration, OpenAIApi } =  require("openai");
 
 const prisma = new PrismaClient()
 
@@ -37,10 +38,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', indexRouter);
 app.use('/chat', chatRouter);
 
+
+
 app.post("/api/chat/newUser", async (req, res) => {
     const { username, password } = req.body;
 
-    if (username == null || username.length < 3 || username.length > 1000) {
+    if (username == null || username.length < 3 || username.length > 30) {
         res.status(400).json({ error: "Invalid username" });
         return;
     }
@@ -56,7 +59,17 @@ app.post("/api/chat/newUser", async (req, res) => {
     let hash = await bcrypt.hash(password, salt);
 
 
-    //TODO check if username already exists
+    // check if username already exists
+    const user = await prisma.user.findFirst({
+        where: {
+            name: username
+        }
+    })
+
+    if (user != null) {
+        res.status(400).json({ error: "Username already exists" });
+        return;
+    }
 
 
     const newUser = await prisma.user.create({
@@ -72,6 +85,14 @@ app.post("/api/chat/newUser", async (req, res) => {
     res.json(newUser);
 
 });
+
+function checkMessage(message) {
+    if(message.toString().trim().toLowerCase().includes("never gonna give you up")) {
+        return false;
+    }
+
+    return true;
+}
 
 
 app.post("/api/chat/login", async (req, res) => {
@@ -125,7 +146,9 @@ app.post("/api/chat/login", async (req, res) => {
 
 
     res.json({
-        jwt: jwt
+        jwt: jwt,
+        id: user.id,
+        username: user.name
     });
 
 });
@@ -173,11 +196,51 @@ app.get("/api/chat/validate", async (req, res) => {
 
 });
 
+async function sendAIMessage(message) {
+    const newMessage = await prisma.chat.create({
+        data: {
+            message: message,
+            userId: "AI"
+        }
+    })
+
+    newMessage.user = {};
+    newMessage.user.name = "AI";
+    newMessage.user.id = "AI";
+    newMessage.userId = undefined;
+
+    io.emit("message", newMessage);
+
+    res.json(newMessage);
+}
+
+async function parseCommand(message) {
+    if(message.toString().startsWith("/ai")) {
+        const promt = message.toString().split("/ai")[1].trim();
+        
+   
+
+    }
+}
+
+
+function generatePrompt(promt) {
+    return "This is a conversation with an AI assistant. The assistant is helpful, creative, clever, and very friendly.\n This is it's promt: " +"\nHuman: Hello, who are you?\nAI: I am an AI created by OpenAI. How can I help you today?\nHuman: "+ promt +"\nAI: "; 
+
+}
+
 
 app.post("/api/chat/send", async (req, res) => {
-    const { message } = req.body;
+    let { message } = req.body;
 
     console.log(message);
+
+    const messageAllowed = checkMessage(message)
+    if(!messageAllowed) {
+        message = "Verbotene Nachricht erkannt!"
+    }
+
+    //check command
 
     if (req.headers.authorization == null) {
         res.status(400).json({ error: "Invalid session" });
@@ -218,6 +281,7 @@ app.post("/api/chat/send", async (req, res) => {
                 }
             })
 
+
             newMessage.user = {};
             newMessage.user.name = user.name;
             newMessage.user.id = user.id;
@@ -226,6 +290,8 @@ app.post("/api/chat/send", async (req, res) => {
             io.emit("message", newMessage);
 
             res.json(newMessage);
+
+            parseCommand(message);
 
             return;
 
