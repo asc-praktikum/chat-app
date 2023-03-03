@@ -18,8 +18,8 @@ export function loginUser(username, password) {
     }).then(res => res.json());
 };
 
-export function sendMessage(message,channelID) {
-    if(checkLocalCommand(message)) {
+export function sendMessage(message, channelID) {
+    if (checkLocalCommand(message)) {
         return;
     }
 
@@ -34,7 +34,7 @@ export function sendMessage(message,channelID) {
     }).then(res => res.json());
 }
 
-export function getMessages(channelID,page = 0) {
+export function getMessages(channelID, page = 0) {
     return fetch(`/api/chat/get?page=${page}&channelID=${channelID}`, {
         headers: {
             "Content-Type": "application/json",
@@ -60,7 +60,7 @@ export function validateJWT() {
     });
 }
 
-export async function uploadImage(file,channelID) {
+export async function uploadImage(file, channelID) {
 
 
     const data = new FormData()
@@ -68,6 +68,22 @@ export async function uploadImage(file,channelID) {
     data.append('channelID', channelID)
 
     return fetch("/api/chat/sendImage", {
+        method: "POST",
+        headers: {
+            "Authorization": "Bearer " + window.localStorage.getItem("jwt")
+        },
+        body: data
+    }).then(res => res.json());
+
+}
+
+export async function uploadFile(file, channelID) {
+
+    const data = new FormData()
+    data.append('file', file)
+    data.append('channelID', channelID)
+
+    return fetch("/api/chat/sendFile", {
         method: "POST",
         headers: {
             "Authorization": "Bearer " + window.localStorage.getItem("jwt")
@@ -102,9 +118,9 @@ export async function joinRoom(channelID) {
 
 
 function checkLocalCommand(message) {
-    if(message.startsWith("/goto")) {
-        if(message.split(" ")[1].length < 2) {
-            window.location.href = "/chat.html?room=default"
+    if (message.startsWith("/goto")) {
+        if (message.split(" ")[1].length < 2) {
+            window.location.href = "/chat.html?room=null"
             return true;
         }
 
@@ -115,7 +131,7 @@ function checkLocalCommand(message) {
 
 
 export async function getUserRooms() {
-  return fetch("/api/chat/getUserRooms", {
+    return fetch("/api/chat/getUserRooms", {
         method: "GET",
         headers: {
             "Content-Type": "application/json",
@@ -124,4 +140,25 @@ export async function getUserRooms() {
         }
     }).then(res => res.json())
 
+}
+
+export async function leaveRoom(channelID) {
+    return fetch("/api/chat/leaveRoom", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + window.localStorage.getItem("jwt"),
+        },
+        body: JSON.stringify({ channelID: channelID })
+    }).then(res => res.json());
+}
+
+
+export async function getOnlineUsers(channelID) {
+    return fetch(`/api/chat/getOnlineUsers?channelID=${channelID}`, {
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + window.localStorage.getItem("jwt")
+        }
+    }).then(res => res.json());
 }

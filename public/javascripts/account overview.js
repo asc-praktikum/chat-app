@@ -1,9 +1,9 @@
 const account = document.getElementById("info")
 const data = document.getElementById("content")
+const backbtn = document.getElementById("BacktoChat")
 
  
 let username = ("")
-
 let editbtn = ("Edit")
 
 username = localStorage.getItem('username');
@@ -17,3 +17,6 @@ account.addEventListener("click", () => {
     data.appendChild(TexteKnoten);
 } )
 
+backbtn.addEventListener("click", () => {
+    window.location.href = "/chat.html"
+})

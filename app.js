@@ -42,12 +42,67 @@ const io = require('socket.io')(http);
 
 
 io.on('connection', (socket) => {
+    socket.emit("connected");
+
+    socket.on('joinRoom', async (data) => {
+        console.log("USER JOINED ROOM")
+
+        if(socket.roomID) {
+            socket.leave(socket.roomID);
+        }
+
+        socket.join(data.roomID);
+        socket.roomID = data.roomID;
+        socket.userID = data.userID;
+        socket.username = data.username;
+
+        //set user online
+        await prisma.user.update({
+            where: {
+                id: data.userID
+            },
+            data: {
+                online: true,
+                currentRoomID: data.roomID
+            }
+        })
+
+    });
+
+
+    //when a socket disconnects, remove it from the list:
+    socket.once('disconnect', async () => {
+        console.log('user disconnected');
+        console.log(socket.username)
+        socket.leave(socket.roomID);
+
+        if(socket.userID==null) {
+            return;
+        }
+
+        //set user offline
+        await prisma.user.update({
+            where: {
+                id: socket.userID
+            },
+            data: {
+                online: false,
+                currentRoomID: ""
+            }
+        })
+
+    });
+
+
+
+
     console.log('a user connected');
 });
 
-http.listen(80, function () {
-    console.log('listening on *:80');
+http.listen(3000, function () {
+    console.log('listening on *:3000');
 });
+
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -237,7 +292,7 @@ async function sendAIMessage(message, channelID) {
     newMessage.user.id = "AI";
     newMessage.userId = undefined;
 
-    io.emit("message."+channelID, newMessage);
+    io.to(channelID).emit("message", newMessage);
 
 }
 
@@ -258,7 +313,7 @@ async function sendIframeMessage(url,channelID) {
     newMessage.user.id = "AI";
     newMessage.userId = undefined;
 
-    io.emit("message."+channelID, newMessage);
+    io.to(channelID).emit("message", newMessage);
 }
 
 async function parseCommand(message, messageOBJ,channelID) {
@@ -280,24 +335,24 @@ async function parseCommand(message, messageOBJ,channelID) {
         sendAIMessage(completion.data.choices[0].text,channelID);
    
     }else if(message.toString().startsWith("/rickroll")) {
-        io.emit(`rickroll.${channelID}`, {});
+        io.to(channelID).emit(`rickroll`, {});
     }else if(message.toString().startsWith("/help")) {
-        sendAIMessage("Commands: \n /ai <promt> - Send a message to the AI \n /rickroll - Rickroll everyone \n /help - Show this message",channelID);
+        sendAIMessage("Commands: \n /ai <promt> - Send a message to the AI \n /rickroll - Rickroll everyone \n /help - Show this message \n /whoami - Shows your username",channelID);
     }else if(message.toString().startsWith("/clear")) {
-        io.emit(`clear.${channelID}`, {});
+        io.to(channelID).emit(`clear`, {});
         //prisma.chat.deleteMany();
     }else if(message.toString().startsWith("/reload")) {
-        io.emit(`reload.${channelID}`, {});
+        io.to(channelID).emit(`reload`, {});
 
     }else if(message.toString().startsWith("/rick")) {
         sendAIMessage("https://www.youtube.com/watch?v=dQw4w9WgXcQ",channelID);
 
     }else if(message.toString().startsWith("/videochat")) {
-        io.emit(`videochat.${channelID}`, {});
+        io.to(channelID).emit(`videochat`, {});
     }else if(message.toString().startsWith("/openlink4all")) {
         if(messageOBJ.user.name != "Tim") return sendAIMessage("You are not allowed to use this command",channelID);
         const link = message.toString().split("/openlink4all")[1].trim();
-        io.emit(`link.${channelID}`, {link: link});
+        io.to(channelID).emit(`link`, {link: link});
     }else if(message.toString().startsWith("/whoami")) {
         sendAIMessage("You are " + messageOBJ.user.name,channelID);
     }else if(message.toString().startsWith("/myid")) {
@@ -336,7 +391,7 @@ app.post("/api/chat/send", async (req, res) => {
     let { message,channelID } = req.body;
 
     if(channelID == null) {
-        channelID = "default"
+        channelID = "null"
     }
 
     console.log(channelID)
@@ -397,7 +452,7 @@ app.post("/api/chat/send", async (req, res) => {
             newMessage.user.id = user.id;
             newMessage.userId = undefined;
 
-            io.emit("message."+channelID, newMessage);
+            io.to(channelID).emit("message", newMessage);
 
             res.json(newMessage);
 
@@ -421,7 +476,7 @@ app.post("/api/chat/sendImage", async (req, res) => {
     let {channelID} = req.body;
 
     if(channelID==null) {
-        channelID = "default"
+        channelID = "null"
     }
 
     if(!req.files) {
@@ -482,7 +537,7 @@ app.post("/api/chat/sendImage", async (req, res) => {
                         newMessage.user.id = user.id;
                         newMessage.userId = undefined;
 
-                        io.emit("message."+channelID, newMessage);
+                        io.to(channelID).emit("message", newMessage);
 
                         res.json(newMessage);
                     }
@@ -496,7 +551,121 @@ app.post("/api/chat/sendImage", async (req, res) => {
         return;
     }
 
+});
 
+
+app.post("/api/chat/sendFile", async (req, res) => {
+    let {channelID} = req.body;
+
+    if(channelID==null||channelID=="null") {
+        channelID = "null"
+    }
+
+    if(!req.files) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+    }
+
+
+    if (req.headers.authorization == null) {
+        res.status(400).json({ error: "Invalid session" });
+        return;
+    }
+
+    const jwt = req.headers.authorization.split(" ")[1];
+
+    const user = await validateJWT(jwt);
+
+    if (user == null) {
+        res.status(400).json({ error: "Invalid session" });
+        return;
+    }
+
+    const userID = user.id;
+
+    const file = req.files.file;
+
+        const blobName = uuidv4();
+        const stream = streamifier.createReadStream(file.data);
+        const streamLength = file.data.length;
+
+        global.blobService.createContainerIfNotExists("chat", {publicAccessLevel: "container"}, (callback) => {
+
+            global.blobService.createBlockBlobFromStream(
+                "chat",
+                blobName,
+                stream,
+                streamLength,
+                async (err) => {
+
+                    if(!err) {
+                        const url = global.blobService.getUrl("chat", blobName);
+
+                        const newMessage = await prisma.chat.create({
+                            data: {
+                                message: file.name,
+                                ressource: url,
+                                userId: userID,
+                                type: "file",
+                                channelID: channelID
+                            }
+                        })
+
+                        newMessage.user = {};
+                        console.log(user);
+                        newMessage.user.name = user.username;
+                        newMessage.user.id = user.id;
+                        newMessage.userId = undefined;
+
+                        io.to(channelID).emit("message", newMessage);
+
+                        res.json(newMessage);
+                    }
+
+                });
+
+            });
+
+   
+
+
+
+
+
+});
+
+
+app.get("/api/chat/getOnlineUsers", async (req, res) => {
+   const {channelID} = req.query;
+
+    if(channelID == null) {
+        res.status(400).json({ error: "Invalid request" });
+        return;
+    }
+
+    const jwt = req.headers.authorization.split(" ")[1];
+
+    const user = await validateJWT(jwt);
+
+    if (user == null) {
+        res.status(400).json({ error: "Invalid session" });
+        return;
+    }
+
+    const users = await prisma.user.findMany({
+        where: {
+            online: true,
+            currentRoomID: channelID
+        },
+
+        select: {
+            id: true,
+            name: true,
+            online: true
+        }
+    })
+
+    res.json(users);
 
 
 
@@ -538,7 +707,7 @@ app.post("/api/chat/joinRoom", async (req, res) => {
     let {channelID} = req.body;
 
     if(channelID == null) {
-        channelID = "default"
+        channelID = "null"
     }
 
     if (req.headers.authorization == null) {
@@ -612,13 +781,71 @@ app.post("/api/chat/joinRoom", async (req, res) => {
 });
 
 
+app.post("/api/chat/leaveRoom", async (req, res) => {
+    let {channelID} = req.body;
+
+    if(channelID == null||channelID=="null") {
+        res.send("Cannot leave default room");
+        return;
+    }
+
+    if (req.headers.authorization == null) {
+        res.status(400).json({ error: "Invalid session" });
+        return;
+    }
+
+    const jwt = req.headers.authorization.split(" ")[1];
+    
+    const user = await validateJWT(jwt);
+
+    if (user == null) {
+        res.status(400).json({ error: "Invalid session" });
+        return;
+    }
+
+    const userID = user.id;
+
+    //check if room exists if nto create it
+    const room = await prisma.room.findUnique({
+        where: {
+            id: channelID
+        }
+    })
+
+    if(room==null) {
+        res.send("Room does not exist");
+        return;
+    }
+
+    //remove room from user rooms
+    const result = await prisma.user.update({
+        where: {
+            id: userID
+        },
+        data: {
+            rooms: {
+                disconnect: {
+                    id: channelID
+                }
+            }
+        }
+    })
+
+    res.json({success: true});
+
+
+
+});
+
+
+
 
 app.get("/api/chat/get", async (req, res) => {
 
     let {channelID} = req.query;
 
     if(channelID == null || channelID == "null") {
-        channelID = "default"
+        channelID = "null"
     }
 
 
@@ -660,7 +887,7 @@ app.get("/api/chat/get", async (req, res) => {
 
     console.log(rooms)
 
-    if(rooms.rooms.length==0) {
+    if(rooms.rooms.length==0&&channelID!="null") {
         res.status(400).json({ error: "User is not part of room "+channelID });
         return;
     }

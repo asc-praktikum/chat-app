@@ -15,3 +15,12 @@
 .profileusername {
     background-color: red;
 }
+
+#BacktoChat:hover {
+    cursor: pointer;
+}
+
+#info:hover {
+    cursor: pointer;
+}
+

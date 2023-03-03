@@ -18,6 +18,8 @@ model user {
   salt     String
   chat      chat[]
   rooms      room[]
+  online      Boolean @default(false)
+  currentRoomID String?
 }
 
 model chat {
