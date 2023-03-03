@@ -4,7 +4,8 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const { PrismaClient } = require('@prisma/client')
 const jose = require('jose')
-const dotenv = require('dotenv')
+const path = require('path')
+require('dotenv').config({ path: path.resolve(__dirname, '.env') })
 const bcrypt = require('bcrypt')
 const streamifier = require('streamifier')
 const { Configuration, OpenAIApi } =  require("openai");
